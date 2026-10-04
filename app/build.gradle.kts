@@ -9,11 +9,11 @@ plugins {
 }
 
 android {
-  namespace = "com.example"
-  compileSdk { version = release(36) { minorApiLevel = 1 } }
+  namespace = "com.ryanrealaf.stemsplitter"
+  compileSdk = 36
 
   defaultConfig {
-    applicationId = "com.aistudio.stemsplitter.qkvm"
+    applicationId = "com.ryanrealaf.stemsplitter"
     minSdk = 24
     targetSdk = 36
     versionCode = 1

@@ -9,7 +9,7 @@ import com.example.ui.MainScreen
 import com.example.ui.StemsplitterViewModel
 import com.example.ui.theme.StemsplitterTheme
 
-class MainActivity : ComponentActivity() {
+open class MainActivity : ComponentActivity() {
 
     private val viewModel: StemsplitterViewModel by viewModels()
 

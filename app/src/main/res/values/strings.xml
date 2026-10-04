@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">Stemsplitter</string>
+    <string name="subtitle">Neural 6-Stem Audio Separation &amp; MIDI Instrument</string>
+    <string name="select_audio">Select Audio File</string>
+    <string name="choose_audio_prompt">Choose an audio track (WAV, MP3, FLAC, M4A, OGG) to separate into 6 isolated stems with polyphonic MIDI transcription.</string>
+    <string name="status_idle">Ready for audio input</string>
+    <string name="status_preparing">Preparing audio file…</string>
+    <string name="status_uploading">Uploading to neural engine…</string>
+    <string name="status_processing">Running HTDemucs 6s &amp; Basic Pitch transcription…</string>
+    <string name="status_saving">Downloading and saving separated stems &amp; MIDI…</string>
+    <string name="status_complete">Separation &amp; transcription complete!</string>
+    <string name="status_error">Processing encountered an issue</string>
+</resources>

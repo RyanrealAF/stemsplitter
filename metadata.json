@@ -1,0 +1,6 @@
+{
+  "name": "Stemsplitter",
+  "description": "Neural audio stem separation and MIDI transcription engine for Vocals, Drums, Bass, Guitar, Piano, and Other instruments.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

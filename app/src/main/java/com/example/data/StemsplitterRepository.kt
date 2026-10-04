@@ -24,9 +24,11 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
 import java.net.URL
+import java.util.zip.ZipInputStream
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.coroutineContext
@@ -303,6 +305,100 @@ class StemsplitterRepository(private val context: Context) {
         Pair(localFile, uri)
     }
 
+
+    /**
+     * Extracts the user-facing MIDI/analysis artifacts from the production ZIP returned
+     * by the Hugging Face Space. The Space exposes the ZIP as one output while the
+     * individual MIDI files are bundled inside it.
+     */
+    suspend fun extractBundleArtifacts(
+        bundleFile: File,
+        subfolder: String = "Stemsplitter"
+    ): List<Pair<ReturnedFile, File?>> = withContext(Dispatchers.IO) {
+        if (!bundleFile.exists()) return@withContext emptyList()
+
+        val results = mutableListOf<Pair<ReturnedFile, File?>>()
+        val stemsDir = File(context.filesDir, "stems").apply { mkdirs() }
+
+        ZipInputStream(FileInputStream(bundleFile).buffered()).use { zip ->
+            while (true) {
+                val entry = zip.nextEntry ?: break
+                if (entry.isDirectory) {
+                    zip.closeEntry()
+                    continue
+                }
+
+                val entryName = entry.name.replace('\\', '/')
+                val lower = entryName.lowercase()
+                val isMidi = lower.endsWith(".mid") || lower.endsWith(".midi")
+                val isJson = lower.endsWith(".json")
+
+                if (!isMidi && !isJson) {
+                    zip.closeEntry()
+                    continue
+                }
+
+                val rawName = entryName.substringAfterLast('/')
+                val safeName = rawName.replace(Regex("[^A-Za-z0-9._-]"), "_")
+                if (safeName.isBlank()) {
+                    zip.closeEntry()
+                    continue
+                }
+
+                val localFile = File(stemsDir, safeName)
+                FileOutputStream(localFile).use { output ->
+                    val buffer = ByteArray(64 * 1024)
+                    var count: Int
+                    while (zip.read(buffer).also { count = it } != -1) {
+                        output.write(buffer, 0, count)
+                    }
+                }
+
+                saveLocalArtifactToDownloads(localFile, safeName, subfolder)
+
+                results.add(
+                    ReturnedFile(url = null, filename = safeName) to localFile
+                )
+                zip.closeEntry()
+            }
+        }
+
+        results
+    }
+
+    private fun saveLocalArtifactToDownloads(
+        localFile: File,
+        filename: String,
+        subfolder: String
+    ): Uri {
+        val safeFilename = filename.replace(Regex("[^A-Za-z0-9._-]"), "_")
+        val values = ContentValues().apply {
+            put(MediaStore.Downloads.DISPLAY_NAME, safeFilename)
+            put(MediaStore.Downloads.MIME_TYPE, AudioUtils.guessMimeType(safeFilename))
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                put(MediaStore.Downloads.RELATIVE_PATH, "Download/$subfolder")
+            }
+        }
+
+        val resolver = context.contentResolver
+        val uri = resolver.insert(
+            MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+            values
+        ) ?: throw IOException("Could not create Downloads artifact: $safeFilename")
+
+        try {
+            resolver.openOutputStream(uri).use { output ->
+                requireNotNull(output) { "Could not open Downloads output stream" }
+                localFile.inputStream().use { input -> input.copyTo(output, 64 * 1024) }
+            }
+        } catch (e: Exception) {
+            resolver.delete(uri, null, null)
+            throw e
+        }
+
+        return uri
+    }
+
     fun groupFilesIntoStems(
         downloadedFiles: List<Pair<ReturnedFile, File?>>,
         audioMetadata: AudioMetadata?
@@ -339,13 +435,19 @@ class StemsplitterRepository(private val context: Context) {
                 }
             }
 
-            // Inspect MIDI if present
+            // Inspect MIDI if present. A malformed/partial MIDI file must not
+            // invalidate the rest of a completed separation.
             var notesCount = 0
             var bpm = 120
             if (midiFile != null && midiFile.exists()) {
-                val info = MidiInspector.parse(midiFile)
-                notesCount = info.totalNotes
-                bpm = info.bpm
+                try {
+                    val info = MidiInspector.parse(midiFile)
+                    notesCount = info.totalNotes
+                    bpm = info.bpm
+                } catch (_: Exception) {
+                    notesCount = 0
+                    bpm = 120
+                }
             }
 
             val size = audioFile?.length() ?: midiFile?.length() ?: 0L

@@ -155,31 +155,74 @@ class StemsplitterViewModel(application: Application) : AndroidViewModel(applica
                 val files = repository.extractReturnedFiles(resultJson)
                 addLog(LogEntry(layer = "STORAGE", message = "Discovered ${files.size} output assets from neural engine."))
 
-                // Step 5: Saving each file
+                // Step 5: Save user-facing outputs. The live Space returns:
+                // a production ZIP, telemetry/analysis JSON, four plots, and six audio stems.
+                // We save the ZIP, JSON, and audio outputs, while keeping plots out of
+                // Downloads. MIDI files are extracted from the production ZIP.
                 val savedFiles = mutableListOf<Pair<ReturnedFile, File?>>()
-                var downloaded = 0
-                for (file in files.distinctBy { it.url ?: it.filename }) {
+                val stemAssets = mutableListOf<Pair<ReturnedFile, File?>>()
+                var processed = 0
+                val uniqueFiles = files.distinctBy { it.url ?: it.filename }
+
+                for (file in uniqueFiles) {
+                    val filename = file.filename.lowercase()
+                    val isZip = filename.endsWith(".zip")
+                    val isAudio = filename.endsWith(".wav") ||
+                        filename.endsWith(".mp3") ||
+                        filename.endsWith(".flac") ||
+                        filename.endsWith(".ogg") ||
+                        filename.endsWith(".m4a")
+                    val isJson = filename.endsWith(".json")
+                    val isPlot = filename.endsWith(".png") ||
+                        filename.endsWith(".jpg") ||
+                        filename.endsWith(".jpeg") ||
+                        filename.endsWith(".webp") ||
+                        filename.endsWith(".svg")
+
+                    if (isPlot || (!isZip && !isAudio && !isJson)) continue
+
                     val url = file.url ?: continue
-                    downloaded++
-                    val p = 0.80f + (0.18f * (downloaded.toFloat() / files.size.coerceAtLeast(1)))
+                    processed++
+                    val p = 0.80f + (0.18f * (processed.toFloat() / uniqueFiles.size.coerceAtLeast(1)))
                     updateStage(ProcessingStage.SAVING_STEMS, "Saving ${file.filename}...", p)
                     addLog(LogEntry(layer = "STORAGE", message = "Saving ${file.filename}..."))
+
                     try {
-                        val (f, _) = repository.saveReturnedFile(file)
-                        savedFiles.add(Pair(file, f))
+                        val (localFile, _) = repository.saveReturnedFile(file)
+                        savedFiles.add(file to localFile)
+
+                        if (isAudio) {
+                            stemAssets.add(file to localFile)
+                        }
+
+                        if (isZip && localFile != null) {
+                            addLog(LogEntry(layer = "MIDI", message = "Extracting MIDI and analysis artifacts from ${file.filename}..."))
+                            val extracted = repository.extractBundleArtifacts(localFile)
+                            savedFiles.addAll(extracted)
+                            stemAssets.addAll(extracted.filter { pair ->
+                                val n = pair.first.filename.lowercase()
+                                n.endsWith(".mid") || n.endsWith(".midi") || n.endsWith(".wav") ||
+                                    n.endsWith(".mp3") || n.endsWith(".flac") || n.endsWith(".ogg") || n.endsWith(".m4a")
+                            })
+                            addLog(LogEntry(layer = "MIDI", message = "Extracted ${extracted.count { it.first.filename.endsWith(".mid", true) || it.first.filename.endsWith(".midi", true) }} MIDI files."))
+                        }
                     } catch (e: Exception) {
                         addLog(LogEntry(layer = "STORAGE", message = "Failed saving ${file.filename}: ${e.message}", isError = true))
                     }
                 }
 
-                // Step 6: Group into 6 clean stems
-                val stems = repository.groupFilesIntoStems(savedFiles, job?.metadata)
+                // Step 6: Group only actual stem/MIDI assets. Bundles and analysis JSON
+                // should never masquerade as the "Other" audio stem.
+                val stems = repository.groupFilesIntoStems(
+                    stemAssets.distinctBy { it.first.filename.lowercase() },
+                    job?.metadata
+                )
                 addLog(LogEntry(layer = "MIDI", message = "MIDI transcription parsed. Vocals, Drums, Bass, Guitar, Piano, Other ready."))
 
                 _currentJob.update { current ->
                     current?.copy(
                         stage = ProcessingStage.COMPLETED,
-                        statusMessage = "Complete. Saved ${savedFiles.size} files to Downloads/Stemsplitter/",
+                        statusMessage = "Complete. Saved ${savedFiles.size} artifacts to Downloads/Stemsplitter/",
                         progressPercent = 1.0f,
                         stems = stems,
                         savedCount = savedFiles.size,
@@ -188,7 +231,7 @@ class StemsplitterViewModel(application: Application) : AndroidViewModel(applica
                     )
                 }
 
-                addLog(LogEntry(layer = "STORAGE", message = "Complete. Saved ${savedFiles.size} files to Downloads/Stemsplitter/"))
+                addLog(LogEntry(layer = "STORAGE", message = "Complete. Saved ${savedFiles.size} artifacts to Downloads/Stemsplitter/"))
 
             } catch (e: Exception) {
                 val err = "Error: ${e.message ?: "Unknown error"}"

@@ -73,6 +73,7 @@ import com.example.audio.PlaybackState
 import com.example.model.ProcessingStage
 import com.example.model.StemItem
 import com.example.model.StemType
+import java.io.File
 import com.example.ui.theme.StudioCardBg
 import com.example.ui.theme.StudioCardBorder
 import com.example.ui.theme.StudioCyan
@@ -95,12 +96,24 @@ fun MainScreen(viewModel: StemsplitterViewModel) {
 
     var showDiagnostics by remember { mutableStateOf(false) }
     var showSettings by remember { mutableStateOf(false) }
+    var showLyrics by remember { mutableStateOf(false) }
 
     // System Audio Document Picker
     val audioPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         uri?.let { viewModel.onAudioSelected(it) }
+    }
+
+    val lyricFile = job?.stems
+        ?.firstOrNull { it.stemType == StemType.VOCALS && !it.localAudioPath.isNullOrBlank() }
+        ?.localAudioPath
+        ?.let(::File)
+        ?: job?.stems?.firstOrNull { !it.localAudioPath.isNullOrBlank() }?.localAudioPath?.let(::File)
+
+    if (showLyrics && lyricFile?.exists() == true) {
+        LyricDisplayScreen(audioFile = lyricFile, onBack = { showLyrics = false })
+        return
     }
 
     val topPadding = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
@@ -179,7 +192,8 @@ fun MainScreen(viewModel: StemsplitterViewModel) {
             item {
                 EngineSpecsBanner(
                     isSeparated = job?.stage == ProcessingStage.COMPLETED,
-                    stemsCount = job?.stems?.filter { it.isDownloaded }?.size ?: 0
+                    stemsCount = job?.stems?.filter { it.isDownloaded }?.size ?: 0,
+                    onOpenLyrics = { showLyrics = true }
                 )
             }
 
@@ -254,7 +268,7 @@ fun MainScreen(viewModel: StemsplitterViewModel) {
 }
 
 @Composable
-fun EngineSpecsBanner(isSeparated: Boolean, stemsCount: Int) {
+fun EngineSpecsBanner(isSeparated: Boolean, stemsCount: Int, onOpenLyrics: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -284,6 +298,16 @@ fun EngineSpecsBanner(isSeparated: Boolean, stemsCount: Int) {
                     text = if (isSeparated) "$stemsCount stems & MIDI transcriptions ready for DAW" else "HTDemucs 6-Source Model • Basic Pitch Polyphony",
                     style = MaterialTheme.typography.bodySmall.copy(color = TextSecondaryDark)
                 )
+            }
+
+            if (isSeparated) {
+                Button(
+                    onClick = onOpenLyrics,
+                    modifier = Modifier.padding(start = 8.dp),
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Text("LYRICS", fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
+                }
             }
 
             Surface(

@@ -183,26 +183,20 @@ fun MainScreen(viewModel: StemsplitterViewModel) {
                 )
             }
 
-            // 6-Stem Studio Mixer & MIDI Section
-            item {
-                Text(
-                    text = "6-STEM INSTRUMENT SUITE",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 1.5.sp,
-                        color = TextSecondaryDark
-                    ),
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
-                )
-            }
-
             val stems = job?.stems
-            if (stems.isNullOrEmpty()) {
-                // Show placeholders for 6 stems prior to separation
-                items(StemType.values().toList()) { stemType ->
-                    StemPlaceholderCard(stemType = stemType)
+            if (!stems.isNullOrEmpty()) {
+                item {
+                    Text(
+                        text = "6-STEM INSTRUMENT SUITE",
+                        style = MaterialTheme.typography.labelSmall.copy(
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.5.sp,
+                            color = TextSecondaryDark
+                        ),
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                    )
                 }
-            } else {
+
                 items(stems) { stem ->
                     StemCard(
                         stem = stem,
@@ -304,71 +298,6 @@ fun EngineSpecsBanner(isSeparated: Boolean, stemsCount: Int) {
                         color = StudioCyan
                     ),
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun StemPlaceholderCard(stemType: StemType) {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 5.dp),
-        colors = CardDefaults.cardColors(containerColor = StudioCardBg.copy(alpha = 0.6f)),
-        border = BorderStroke(1.dp, StudioCardBorder),
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(34.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(stemType.color.copy(alpha = 0.15f))
-                    .border(1.dp, stemType.color.copy(alpha = 0.5f), RoundedCornerShape(8.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = stemType.title.take(2).uppercase(),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 11.sp,
-                    color = stemType.color
-                )
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = stemType.title,
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimaryDark
-                    )
-                )
-                Text(
-                    text = stemType.subtitle,
-                    style = MaterialTheme.typography.labelSmall.copy(color = TextMutedDark)
-                )
-            }
-
-            Surface(
-                shape = RoundedCornerShape(6.dp),
-                color = StudioSurfaceVariant
-            ) {
-                Text(
-                    text = if (stemType == StemType.DRUMS) "GM Ch 10" else "GM Ch ${stemType.gmChannel + 1}",
-                    style = MaterialTheme.typography.labelSmall.copy(
-                        color = TextMutedDark,
-                        fontSize = 10.sp
-                    ),
-                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                 )
             }
         }

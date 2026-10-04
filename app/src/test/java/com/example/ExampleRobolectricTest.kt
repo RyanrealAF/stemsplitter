@@ -2,7 +2,9 @@ package com.example
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import com.example.R
 import com.example.audio.MidiInspector
+import com.ryanrealaf.stemsplitter.MainActivity
 import com.example.data.AudioUtils
 import com.example.model.StemType
 import org.junit.Assert.assertEquals
@@ -67,7 +69,7 @@ class ExampleRobolectricTest {
 
     @Test
     fun `test launch MainActivity`() {
-        val controller = org.robolectric.Robolectric.buildActivity(com.example.MainActivity::class.java)
+        val controller = org.robolectric.Robolectric.buildActivity(MainActivity::class.java)
         controller.setup()
         assertNotNull(controller.get())
     }

@@ -9,7 +9,7 @@ plugins {
 }
 
 android {
-  namespace = "com.example"
+  namespace = "com.ryanrealaf.stemsplitter"
   compileSdk = 36
 
   defaultConfig {

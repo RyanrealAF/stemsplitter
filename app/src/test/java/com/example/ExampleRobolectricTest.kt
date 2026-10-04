@@ -54,7 +54,7 @@ class ExampleRobolectricTest {
                 0x00, 0x00, 0x00, 0x06,
                 0x00, 0x01,
                 0x00, 0x01,
-                0x01, 0xE0.toByte() // 480
+                0x01, 0xE0.toByte()
             )
             out.write(header)
         }
@@ -67,7 +67,7 @@ class ExampleRobolectricTest {
 
     @Test
     fun `test launch MainActivity`() {
-        val controller = org.robolectric.Robolectric.buildActivity(com.ryanrealaf.stemsplitter.MainActivity::class.java)
+        val controller = org.robolectric.Robolectric.buildActivity(com.example.MainActivity::class.java)
         controller.setup()
         assertNotNull(controller.get())
     }

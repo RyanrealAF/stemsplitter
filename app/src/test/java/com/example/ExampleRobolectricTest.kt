@@ -64,4 +64,11 @@ class ExampleRobolectricTest {
         assertEquals(480, info.timeDivisionPpq)
         file.delete()
     }
+
+    @Test
+    fun `test launch MainActivity`() {
+        val controller = org.robolectric.Robolectric.buildActivity(com.ryanrealaf.stemsplitter.MainActivity::class.java)
+        controller.setup()
+        assertNotNull(controller.get())
+    }
 }

@@ -2,7 +2,7 @@ package com.example
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
-import com.example.R
+import com.ryanrealaf.stemsplitter.R
 import com.example.audio.MidiInspector
 import com.ryanrealaf.stemsplitter.MainActivity
 import com.example.data.AudioUtils
